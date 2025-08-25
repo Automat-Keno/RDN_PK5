@@ -26,6 +26,16 @@ def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
             if key.startswith('MONGODB_'):
                 config_str = config_str.replace(f'${{{key}}}', value)
         
+        # Sprawdź czy pozostały jakieś niepodmienione zmienne
+        if '${MONGODB_' in config_str:
+            print("⚠️  Brak zmiennych środowiskowych MongoDB. Używam wartości lokalnych...")
+            # Podmień na wartości lokalne dla testów
+            config_str = config_str.replace('${MONGODB_HOST}', 'localhost')
+            config_str = config_str.replace('${MONGODB_PORT}', '27017')
+            config_str = config_str.replace('${MONGODB_USERNAME}', 'admin')
+            config_str = config_str.replace('${MONGODB_PASSWORD}', 'password')
+            config_str = config_str.replace('${MONGODB_DB_NAME}', 'pse_data')
+        
         return json.loads(config_str)
     except FileNotFoundError:
         print(f"Błąd: Plik konfiguracyjny {config_path} nie został znaleziony")
