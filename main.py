@@ -26,31 +26,16 @@ def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
             if key.startswith('MONGODB_'):
                 config_str = config_str.replace(f'${{{key}}}', value)
         
-        # Debug - sprawdź co zostało podmienione (tylko w GitHub Actions)
-        if os.getenv('GITHUB_ACTIONS'):
-            print(f"🔧 Debug - zmienne środowiskowe MONGODB_*:")
-            for key in ['MONGODB_HOST', 'MONGODB_PORT', 'MONGODB_USERNAME', 'MONGODB_PASSWORD', 'MONGODB_DB_NAME']:
-                print(f"  {key}: {'SET' if os.getenv(key) else 'NOT SET'}")
-        
-        # Sprawdź czy pozostały jakieś niepodmienione zmienne
-        if '${MONGODB_' in config_str:
-            print("⚠️  Brak zmiennych środowiskowych MongoDB. Używam wartości lokalnych...")
-            # Podmień na wartości lokalne dla testów
-            config_str = config_str.replace('${MONGODB_HOST}', 'localhost')
-            config_str = config_str.replace('${MONGODB_PORT}', '27017')
-            config_str = config_str.replace('${MONGODB_USERNAME}', 'admin')
-            config_str = config_str.replace('${MONGODB_PASSWORD}', 'password')
-            config_str = config_str.replace('${MONGODB_DB_NAME}', 'pse_data')
-        
         parsed_config = json.loads(config_str)
         
-        # KRYTYCZNE: Konwersja port na int (GitHub Actions przesyła jako string)
+        # Konwersja port na int jeśli zostało podmienione
         if 'database' in parsed_config and 'port' in parsed_config['database']:
-            try:
-                parsed_config['database']['port'] = int(parsed_config['database']['port'])
-            except (ValueError, TypeError):
-                print(f"⚠️  Błędny format portu: {parsed_config['database']['port']}, używam 27017")
-                parsed_config['database']['port'] = 27017
+            if isinstance(parsed_config['database']['port'], str):
+                try:
+                    parsed_config['database']['port'] = int(parsed_config['database']['port'])
+                except (ValueError, TypeError):
+                    print(f"⚠️  Błędny format portu, używam 27017")
+                    parsed_config['database']['port'] = 27017
         
         return parsed_config
     except FileNotFoundError:
@@ -59,8 +44,6 @@ def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
     except json.JSONDecodeError as e:
         print(f"Błąd: Nieprawidłowy format JSON w pliku {config_path}: {e}")
         sys.exit(1)
-
-
 def get_target_date() -> str:
     """Zwraca datę docelową (jutro) w formacie YYYY-MM-DD."""
     tomorrow = datetime.now() + timedelta(days=1)
