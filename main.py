@@ -98,21 +98,18 @@ def main():
         )
 
         # Uruchomienie przetwarzania
-        success = processor.process_and_save()
-
-        if success:
-            print("✅ Dane zostały pomyślnie pobrane i zapisane do bazy danych")
+        csv_content = downloader.download()
+        if csv_content:
+            processed_data = processor.process_csv_content(csv_content)
+            print(f"✅ Pobrano i przetworzono {len(processed_data)} wierszy danych")
             return 0
         else:
-            print("❌ Wystąpił błąd podczas przetwarzania danych")
+            print("❌ Nie udało się pobrać danych")
             return 1
 
     except Exception as e:
         print(f"❌ Błąd krytyczny: {e}")
         return 1
-    finally:
-        # Zamykanie połączenia z bazą danych
-        mongo_connector.disconnect()
 
 
 if __name__ == "__main__":
