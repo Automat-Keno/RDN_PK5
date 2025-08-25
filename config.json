@@ -1,21 +1,47 @@
 {
     "database": {
-        "host": "localhost",
-        "port": 27017,
-        "username": "user",
-        "password": "pass",
-        "db_name": "mydb"
+        "host": "${MONGODB_HOST}",
+        "port": "${MONGODB_PORT}",
+        "username": "${MONGODB_USERNAME}",
+        "password": "${MONGODB_PASSWORD}",
+        "db_name": "${MONGODB_DB_NAME}"
     },
     "pobierz": {
-        "file_5": {
-            "url_template": "https://example.com/data?start={data_start}&end={data_end}",
-            "int_cols": ["col1", "col2"],
-            "float_cols": ["col3"],
-            "date_cols": ["col4"],
-            "fields_to_utc": [],
-            "fields_to_add_hour": {},
-            "date_format": "%Y-%m-%d",
-            "kolekcja_mongo": "kolekcja"
+        "file_2": {
+            "path": "pliki",
+            "opis": "Plany pracy jednostek wytwórczych Rynek Dnia Bieżącego",
+            "url_template": "https://www.pse.pl/getcsv/-/export/csv/PL_PWM_RDN/data/{data_start}",
+            "nazwa_pliku": "PL_PWM_RDN",
+            "kolekcja_mongo": "PL_PWM_RDN",
+            "int_cols": [
+                "Godzina"
+            ],
+            "float_cols": [
+                "Czechy_EXP",
+                "Czechy_IMP",
+                "Słowacja_EXP",
+                "Słowacja_IMP",
+                "Niemcy_EXP",
+                "Niemcy_IMP",
+                "Szwecja_EXP",
+                "Szwecja_IMP",
+                "Ukraina_ZAM_DOB_EXP",
+                "Ukraina_ZAM_DOB_IMP",
+                "Ukraina_RZE_CHA_EXP",
+                "Ukraina_RZE_CHA_IMP",
+                "Litwa_EXP",
+                "Litwa_IMP"
+            ],
+            "date_cols": [
+                "Data"
+            ],
+            "fields_to_utc": [
+                "Data"
+            ],
+            "fields_to_add_hour": {
+                "Data": "Godzina"
+            },
+            "date_format": "%Y%m%d"
         }
     }
 }
