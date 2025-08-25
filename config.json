@@ -7,41 +7,42 @@
         "db_name": "${MONGODB_DB_NAME}"
     },
     "pobierz": {
-        "file_2": {
+        "file_5": {
             "path": "pliki",
-            "opis": "Plany pracy jednostek wytwórczych Rynek Dnia Bieżącego",
-            "url_template": "https://www.pse.pl/getcsv/-/export/csv/PL_PWM_RDN/data/{data_start}",
-            "nazwa_pliku": "PL_PWM_RDN",
-            "kolekcja_mongo": "PL_PWM_RDN",
+            "opis": "Praca KSE Plany Wymiany Międzysystemowej na poszczególnych przekrojach handlowych uzgodnione w ramach PK5",
+            "url_template": "https://www.pse.pl/getcsv/-/export/csv/PL_PD_GO_BILANS/data_od/{data_start}/data_do/{data_end}",
+            "nazwa_pliku": "PL_PD_GO_BILANS",
+            "kolekcja_mongo": "PL_PD_GO_BILANS_N",
             "int_cols": [
-                "Godzina"
+                "Godzina",
+                "Wymagana rezerwa mocy OSP",
+                "Prognozowane zapotrzebowanie sieci",
+                "Moc dyspozycyjna JW i magazynów energii świadczących usługi bilansujące w ramach RB dostępna dla OSP",
+                "Nadwyżka mocy dostępna dla OSP (7) + (9) - [(3) - (12)] - (13)",
+                "Nadwyżka mocy dostępna dla OSP ponad wymaganą rezerwę moc (5) - (4)",
+                "Moc dyspozycyjna JW i magazynów energii świadczących usługi bilansujące w ramach RB",
+                "Przewidywana generacja JW i magazynów energii świadczących usługi bilansujące w ramach RB (3) - (9)",
+                "Prognozowana generacja JW i magazynów energii nie świadczących usług bilansujących w ramach RB",
+                "Prognozowana sumaryczna generacja źródeł wiatrowych",
+                "Prognozowana sumaryczna generacja źródeł fotowoltaicznych",
+                "Planowane saldo wymiany międzysystemowej",
+                "Prognozowana wielkość niedyspozycyjności wynikająca z ograniczeń sieciowych występujących w sieci przesyłowej oraz sieci dystrybucyjnej w zakresie dostarczania energii elektrycznej",
+                "Prognozowana wielkość niedyspozycyjności wynikających z warunków eksploatacyjnych JW świadczących usługi bilansujące w ramach RB",
+                "Przewidywana generacja zasobów wytwórczych nieobjętych obowiązkami mocowymi",
+                "Obowiązki mocowe wszystkich jednostek rynku mocy"
             ],
-            "float_cols": [
-                "Czechy_EXP",
-                "Czechy_IMP",
-                "Słowacja_EXP",
-                "Słowacja_IMP",
-                "Niemcy_EXP",
-                "Niemcy_IMP",
-                "Szwecja_EXP",
-                "Szwecja_IMP",
-                "Ukraina_ZAM_DOB_EXP",
-                "Ukraina_ZAM_DOB_IMP",
-                "Ukraina_RZE_CHA_EXP",
-                "Ukraina_RZE_CHA_IMP",
-                "Litwa_EXP",
-                "Litwa_IMP"
-            ],
+            "float_cols": [],
             "date_cols": [
-                "Data"
+                "Doba"
             ],
             "fields_to_utc": [
-                "Data"
+                "Doba"
             ],
             "fields_to_add_hour": {
-                "Data": "Godzina"
+                "Doba": "Godzina"
             },
-            "date_format": "%Y%m%d"
+            "date_format": "%Y-%m-%d",
+            "time_delta": 9
         }
     }
 }

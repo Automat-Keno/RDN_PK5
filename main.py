@@ -60,7 +60,7 @@ def main():
     # Ładowanie konfiguracji
     config = load_config()
 
-    # Ustawienie daty docelowej
+    # Ustawienie daty docelowej i zakresu
     target_date = get_target_date()
     print(f"📅 Pobieranie danych dla daty: {target_date}")
 
@@ -75,15 +75,22 @@ def main():
     )
 
     # Konfiguracja pobierania danych
-    file_key = "file_2"
+    file_key = "file_5"
     file_config = config["pobierz"][file_key]
+    # Wyznacz zakres dat (data_end) jeśli wymagany
+    time_delta = int(file_config.get("time_delta", 0))
+    date_now = datetime.now()
+    data_start = target_date
+    data_end = (date_now + timedelta(days=time_delta)
+                ).strftime('%Y-%m-%d') if time_delta else None
 
     try:
         # Pobieranie danych
         print("📥 Pobieranie danych z PSE...")
         downloader = OptimizedFileDownloader(
             url_template=file_config["url_template"],
-            data_start=target_date
+            data_start=data_start,
+            data_end=data_end
         )
 
         # Pobieranie i przetwarzanie danych w jednym kroku
