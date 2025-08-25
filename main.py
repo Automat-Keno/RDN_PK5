@@ -19,24 +19,25 @@ def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-        
+
         # Podmiana zmiennych środowiskowych
         config_str = json.dumps(config)
         for key, value in os.environ.items():
             if key.startswith('MONGODB_'):
                 config_str = config_str.replace(f'${{{key}}}', value)
-        
+
         parsed_config = json.loads(config_str)
-        
+
         # Konwersja port na int jeśli zostało podmienione
         if 'database' in parsed_config and 'port' in parsed_config['database']:
             if isinstance(parsed_config['database']['port'], str):
                 try:
-                    parsed_config['database']['port'] = int(parsed_config['database']['port'])
+                    parsed_config['database']['port'] = int(
+                        parsed_config['database']['port'])
                 except (ValueError, TypeError):
                     print(f"⚠️  Błędny format portu, używam 27017")
                     parsed_config['database']['port'] = 27017
-        
+
         return parsed_config
     except FileNotFoundError:
         print(f"Błąd: Plik konfiguracyjny {config_path} nie został znaleziony")
@@ -44,6 +45,8 @@ def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
     except json.JSONDecodeError as e:
         print(f"Błąd: Nieprawidłowy format JSON w pliku {config_path}: {e}")
         sys.exit(1)
+
+
 def get_target_date() -> str:
     """Zwraca datę docelową (jutro) w formacie YYYY-MM-DD."""
     tomorrow = datetime.now() + timedelta(days=1)
@@ -101,7 +104,8 @@ def main():
         csv_content = downloader.download()
         if csv_content:
             processed_data = processor.process_csv_content(csv_content)
-            print(f"✅ Pobrano i przetworzono {len(processed_data)} wierszy danych")
+            print(
+                f"✅ Pobrano i przetworzono {len(processed_data)} wierszy danych")
             return 0
         else:
             print("❌ Nie udało się pobrać danych")
