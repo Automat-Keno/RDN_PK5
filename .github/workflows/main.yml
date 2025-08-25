@@ -1,0 +1,55 @@
+name: RDN PK5 Data Collector
+
+on:
+  schedule:
+    # Uruchamiaj co 30 minut między 7:00 a 21:59
+    - cron: '*/30 7-21 * * *'
+    # Uruchamiaj codziennie o 22:00
+    - cron: '0 22 * * *'
+  workflow_dispatch:  # Pozwala na ręczne uruchomienie
+
+jobs:
+  collect-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run data collector
+      env:
+        MONGODB_HOST: ${{ secrets.MONGODB_HOST }}
+        MONGODB_PORT: ${{ secrets.MONGODB_PORT }}
+        MONGODB_USERNAME: ${{ secrets.MONGODB_USERNAME }}
+        MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
+        MONGODB_DB_NAME: ${{ secrets.MONGODB_DB_NAME }}
+      run: |
+        python main.py
+        
+    - name: Notify on failure
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#alerts'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} 
