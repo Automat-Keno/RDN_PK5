@@ -46,6 +46,10 @@ jobs:
         
     - name: Notify on failure
       if: failure()
-      run: |
-        echo "❌ Workflow failed! Check the logs for details."
-        # Możesz dodać tutaj integrację z Slack/Discord/Teams jeśli potrzebujesz 
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#alerts'
+        text: 'RDN PK5 Data Collector workflow failed!'
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} 
