@@ -1,0 +1,21 @@
+{
+    "database": {
+        "host": "localhost",
+        "port": 27017,
+        "username": "user",
+        "password": "pass",
+        "db_name": "mydb"
+    },
+    "pobierz": {
+        "file_5": {
+            "url_template": "https://example.com/data?start={data_start}&end={data_end}",
+            "int_cols": ["col1", "col2"],
+            "float_cols": ["col3"],
+            "date_cols": ["col4"],
+            "fields_to_utc": [],
+            "fields_to_add_hour": {},
+            "date_format": "%Y-%m-%d",
+            "kolekcja_mongo": "kolekcja"
+        }
+    }
+}
