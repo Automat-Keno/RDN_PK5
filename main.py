@@ -34,7 +34,8 @@ def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
         if 'database' in parsed_config and 'port' in parsed_config['database']:
             if isinstance(parsed_config['database']['port'], str):
                 try:
-                    parsed_config['database']['port'] = int(parsed_config['database']['port'])
+                    parsed_config['database']['port'] = int(
+                        parsed_config['database']['port'])
                 except (ValueError, TypeError):
                     print("⚠️  Błędny format portu, używam 27017")
                     parsed_config['database']['port'] = 27017
@@ -64,8 +65,10 @@ def main():
 
     # Ustawienie daty docelowej i zakresu
     data_start = get_target_date()
-    data_end = (datetime.strptime(data_start, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
-    print(f"📅 Zakres: {data_start} 00:00 → {data_end} 00:00 (czas lokalny Warszawa)")
+    data_end = (datetime.strptime(data_start, '%Y-%m-%d') +
+                timedelta(days=1)).strftime('%Y-%m-%d')
+    print(
+        f"📅 Zakres: {data_start} 00:00 → {data_end} 00:00 (czas lokalny Warszawa)")
 
     # Konfiguracja bazy danych
     mongo_config = config["database"]
@@ -108,7 +111,8 @@ def main():
         json_data = downloader.download_json()
         if json_data:
             processed_data = processor.process_json_value(json_data)
-            print(f"✅ Pobrano i przetworzono {len(processed_data)} wierszy danych")
+            print(
+                f"✅ Pobrano i przetworzono {len(processed_data)} wierszy danych")
             return 0
         else:
             print("❌ Nie udało się pobrać danych")
