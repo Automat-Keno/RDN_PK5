@@ -11,9 +11,9 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 import pytz
 
-from data_processor import OptimizedDataProcessor
-from file_downloader import OptimizedFileDownloader
-from mongo_connector import OptimizedMongoConnector
+from processor.data_processor import OptimizedDataProcessor
+from downloader.file_downloader import OptimizedFileDownloader
+from database.mongo_connector import OptimizedMongoConnector
 
 
 def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
