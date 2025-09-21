@@ -29,16 +29,21 @@ def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
                 config_str = config_str.replace(f'${{{key}}}', value)
 
         parsed_config = json.loads(config_str)
-        
+
         # Sprawdź czy pozostały jakieś niepodmienione zmienne środowiskowe
         # Jeśli tak, dodaj wartości lokalne dla testów
         if '${MONGODB_' in config_str:
-            print("⚠️  Brak zmiennych środowiskowych MongoDB. Używam wartości lokalnych...")
-            config_str = config_str.replace('${MONGODB_HOST}', '91.185.184.123')
+            print(
+                "⚠️  Brak zmiennych środowiskowych MongoDB. Używam wartości lokalnych...")
+            config_str = config_str.replace(
+                '${MONGODB_HOST}', '91.185.184.123')
             config_str = config_str.replace('${MONGODB_PORT}', '27017')
-            config_str = config_str.replace('${MONGODB_USERNAME}', 'mo1608_prod')
-            config_str = config_str.replace('${MONGODB_PASSWORD}', 'Kalafior007!')
-            config_str = config_str.replace('${MONGODB_DB_NAME}', 'mo1608_prod')
+            config_str = config_str.replace(
+                '${MONGODB_USERNAME}', 'mo1608_prod')
+            config_str = config_str.replace(
+                '${MONGODB_PASSWORD}', 'Kalafior007!')
+            config_str = config_str.replace(
+                '${MONGODB_DB_NAME}', 'mo1608_prod')
             parsed_config = json.loads(config_str)
 
         # Konwersja port na int jeśli zostało podmienione

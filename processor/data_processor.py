@@ -75,8 +75,10 @@ class OptimizedDataProcessor:
         dla podanego business_date (YYYY-MM-DD).
         """
         warsaw = pytz.timezone('Europe/Warsaw')
-        dt_local_date = datetime.datetime.strptime(business_date_str, '%Y-%m-%d').date()
-        dt_local_midnight = warsaw.localize(datetime.datetime.combine(dt_local_date, datetime.time(0, 0)))
+        dt_local_date = datetime.datetime.strptime(
+            business_date_str, '%Y-%m-%d').date()
+        dt_local_midnight = warsaw.localize(
+            datetime.datetime.combine(dt_local_date, datetime.time(0, 0)))
         return dt_local_midnight.astimezone(pytz.UTC)
 
     def process_json_value(self, json_obj: dict) -> List[Dict[str, Any]]:
@@ -104,18 +106,21 @@ class OptimizedDataProcessor:
         for row in items:
             # Godzina z 'plan_dtime' (lokalny czas 'YYYY-MM-DD HH:MM:SS')
             try:
-                godz = int(datetime.datetime.strptime(row.get('plan_dtime'), '%Y-%m-%d %H:%M:%S').hour)
+                godz = int(datetime.datetime.strptime(
+                    row.get('plan_dtime'), '%Y-%m-%d %H:%M:%S').hour)
             except Exception:
                 godz = None
 
             # Ustal początek doby lokalnej w UTC tylko raz (z pierwszego rekordu z business_date)
             if start_day_utc is None and row.get('business_date'):
-                start_day_utc = self._start_of_business_day_utc(row['business_date'])
+                start_day_utc = self._start_of_business_day_utc(
+                    row['business_date'])
 
             # Doba per rekord: początek_doby_UTC + godzina
             doba_utc_datetime = None
             if start_day_utc is not None and godz is not None:
-                doba_utc_datetime = start_day_utc + datetime.timedelta(hours=godz)
+                doba_utc_datetime = start_day_utc + \
+                    datetime.timedelta(hours=godz)
 
             doc: Dict[str, Any] = {
                 'Doba': doba_utc_datetime,
@@ -138,7 +143,8 @@ class OptimizedDataProcessor:
             if self.mongo_connector.connect():
                 col = self.mongo_connector.db[self.kolekcja_mongo]
 
-                data_cet = start_day_utc  # identyfikator dnia (początek doby lokalnej zapisany w UTC)
+                # identyfikator dnia (początek doby lokalnej zapisany w UTC)
+                data_cet = start_day_utc
                 now_utc = datetime.datetime.now(pytz.UTC)
 
                 existing = col.find_one({'data_cet': data_cet})
