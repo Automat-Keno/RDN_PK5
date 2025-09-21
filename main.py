@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """
-Zoptymalizowana wersja skryptu do pobierania i przetwarzania danych PSE
-Przeznaczona do uruchamiania w GitHub Actions CI/CD
+Zoptymalizowana wersja skryptu do pobierania i przetwarzania danych PSE (API JSON)
+Przeznaczona do uruchamiania lokalnie i w GitHub Actions CI/CD
 """
 
 import json
 import sys
 import os
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
-from processor.data_processor import OptimizedDataProcessor
-from downloader.file_downloader import OptimizedFileDownloader
-from database.mongo_connector import OptimizedMongoConnector
+from typing import Dict, Any
+import pytz
+
+from data_processor import OptimizedDataProcessor
+from file_downloader import OptimizedFileDownloader
+from mongo_connector import OptimizedMongoConnector
 
 
 def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
@@ -32,10 +34,9 @@ def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
         if 'database' in parsed_config and 'port' in parsed_config['database']:
             if isinstance(parsed_config['database']['port'], str):
                 try:
-                    parsed_config['database']['port'] = int(
-                        parsed_config['database']['port'])
+                    parsed_config['database']['port'] = int(parsed_config['database']['port'])
                 except (ValueError, TypeError):
-                    print(f"⚠️  Błędny format portu, używam 27017")
+                    print("⚠️  Błędny format portu, używam 27017")
                     parsed_config['database']['port'] = 27017
 
         return parsed_config
@@ -48,21 +49,23 @@ def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
 
 
 def get_target_date() -> str:
-    """Zwraca datę docelową (jutro) w formacie YYYY-MM-DD."""
-    tomorrow = datetime.now() + timedelta(days=1)
-    return tomorrow.strftime('%Y-%m-%d')
+    """Zwraca datę docelową (dzisiaj w strefie Europe/Warsaw) w formacie YYYY-MM-DD."""
+    warsaw = pytz.timezone('Europe/Warsaw')
+    today_warsaw = datetime.now(warsaw).date()
+    return today_warsaw.strftime('%Y-%m-%d')
 
 
 def main():
     """Główna funkcja aplikacji."""
-    print("🚀 Uruchamianie zoptymalizowanego skryptu PSE...")
+    print("🚀 Uruchamianie skryptu PSE (API JSON)...")
 
     # Ładowanie konfiguracji
     config = load_config()
 
     # Ustawienie daty docelowej i zakresu
-    target_date = get_target_date()
-    print(f"📅 Pobieranie danych dla daty: {target_date}")
+    data_start = get_target_date()
+    data_end = (datetime.strptime(data_start, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
+    print(f"📅 Zakres: {data_start} 00:00 → {data_end} 00:00 (czas lokalny Warszawa)")
 
     # Konfiguracja bazy danych
     mongo_config = config["database"]
@@ -77,26 +80,20 @@ def main():
     # Konfiguracja pobierania danych
     file_key = "file_5"
     file_config = config["pobierz"][file_key]
-    # Wyznacz zakres dat (data_end) jeśli wymagany
-    time_delta = int(file_config.get("time_delta", 0))
-    date_now = datetime.now()
-    data_start = target_date
-    data_end = (date_now + timedelta(days=time_delta)
-                ).strftime('%Y-%m-%d') if time_delta else None
 
     try:
         # Pobieranie danych
-        print("📥 Pobieranie danych z PSE...")
+        print("📥 Pobieranie danych z API PSE...")
         downloader = OptimizedFileDownloader(
             url_template=file_config["url_template"],
             data_start=data_start,
             data_end=data_end
         )
 
-        # Pobieranie i przetwarzanie danych w jednym kroku
+        # Procesor: mapowanie, typy, Mongo
         processor = OptimizedDataProcessor(
             url_template=file_config["url_template"],
-            data_start=target_date,
+            data_start=data_start,
             int_cols=file_config["int_cols"],
             float_cols=file_config["float_cols"],
             date_cols=file_config["date_cols"],
@@ -104,15 +101,14 @@ def main():
             fields_to_add_hour=file_config.get("fields_to_add_hour", {}),
             mongo_connector=mongo_connector,
             kolekcja_mongo=file_config["kolekcja_mongo"],
-            date_format=file_config.get("date_format", "%Y%m%d")
+            date_format=file_config.get("date_format", "%Y-%m-%d")
         )
 
-        # Uruchomienie przetwarzania
-        csv_content = downloader.download()
-        if csv_content:
-            processed_data = processor.process_csv_content(csv_content)
-            print(
-                f"✅ Pobrano i przetworzono {len(processed_data)} wierszy danych")
+        # JSON flow
+        json_data = downloader.download_json()
+        if json_data:
+            processed_data = processor.process_json_value(json_data)
+            print(f"✅ Pobrano i przetworzono {len(processed_data)} wierszy danych")
             return 0
         else:
             print("❌ Nie udało się pobrać danych")

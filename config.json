@@ -10,7 +10,7 @@
         "file_5": {
             "path": "pliki",
             "opis": "Praca KSE Plany Wymiany Międzysystemowej na poszczególnych przekrojach handlowych uzgodnione w ramach PK5",
-            "url_template": "https://www.pse.pl/getcsv/-/export/csv/PL_PD_GO_BILANS/data_od/{data_start}/data_do/{data_end}",
+            "url_template": "https://api.raporty.pse.pl/api/pk5l-wp?$filter=plan_dtime+gt+'{data_start}+00:00:00'+and+plan_dtime+le+'{data_end}+00:00:00'&$orderby=plan_dtime+asc&$first=20000",
             "nazwa_pliku": "PL_PD_GO_BILANS",
             "kolekcja_mongo": "PL_PD_GO_BILANS_N",
             "int_cols": [
@@ -32,17 +32,11 @@
                 "Obowiązki mocowe wszystkich jednostek rynku mocy"
             ],
             "float_cols": [],
-            "date_cols": [
-                "Doba"
-            ],
-            "fields_to_utc": [
-                "Doba"
-            ],
-            "fields_to_add_hour": {
-                "Doba": "Godzina"
-            },
+            "date_cols": ["Doba"],
+            "fields_to_utc": ["Doba"],
+            "fields_to_add_hour": { "Doba": "Godzina" },
             "date_format": "%Y-%m-%d",
-            "time_delta": 9
+            "time_delta": 1
         }
     }
 }
