@@ -1,5 +1,7 @@
 """
-Procesor danych: przetwarzanie JSON z API PSE (pk5l-wp) → „ładne” pola → Mongo upsert.
+Procesor danych: JSON z API PSE (pk5l-wp) → techniczne pola (ASCII, z podkreśleniami)
+i zapis w Mongo w układzie: jeden dokument na dzień z polami `first` (pierwszy snapshot)
+i `newest` (najnowszy snapshot). `data_cet` = początek doby lokalnej (Warszawa) w UTC.
 """
 
 import datetime
@@ -10,22 +12,23 @@ from typing import List, Dict, Any, Optional
 class OptimizedDataProcessor:
     """Procesor danych do transformacji JSON → dokumenty i zapis do Mongo."""
 
+    # Mapowanie: klucz z API → techniczna nazwa (underscored, ASCII)
     FIELD_MAPPING = {
-        "grid_demand_fcst": "Prognozowane zapotrzebowanie sieci",
-        "req_pow_res": "Wymagana rezerwa mocy OSP",
-        "surplus_cap_avail_tso": "Nadwyżka mocy dostępna dla OSP (7) + (9) - [(3) - (12)] - (13)",
-        "gen_surplus_avail_tso_above": "Nadwyżka mocy dostępna dla OSP ponad wymaganą rezerwę moc (5) - (4)",
-        "avail_cap_gen_units_stor_prov": "Moc dyspozycyjna JW i magazynów energii świadczących usługi bilansujące w ramach RB",
-        "avail_cap_gen_units_stor_prov_tso": "Moc dyspozycyjna JW i magazynów energii świadczących usługi bilansujące w ramach RB dostępna dla OSP",
-        "fcst_gen_unit_stor_prov": "Przewidywana generacja JW i magazynów energii świadczących usługi bilansujące w ramach RB (3) - (9)",
-        "fcst_gen_unit_stor_non_prov": "Prognozowana generacja JW i magazynów energii nie świadczących usług bilansujących w ramach RB",
-        "fcst_wi_tot_gen": "Prognozowana sumaryczna generacja źródeł wiatrowych",
-        "fcst_pv_tot_gen": "Prognozowana sumaryczna generacja źródeł fotowoltaicznych",
-        "planned_exchange": "Planowane saldo wymiany międzysystemowej",
-        "fcst_unav_energy": "Prognozowana wielkość niedyspozycyjności wynikająca z ograniczeń sieciowych występujących w sieci przesyłowej oraz sieci dystrybucyjnej w zakresie dostarczania energii elektrycznej",
-        "sum_unav_oper_cond": "Prognozowana wielkość niedyspozycyjności wynikających z warunków eksploatacyjnych JW świadczących usługi bilansujące w ramach RB",
-        "pred_gen_res_not_cov": "Przewidywana generacja zasobów wytwórczych nieobjętych obowiązkami mocowymi",
-        "cap_market_obligation": "Obowiązki mocowe wszystkich jednostek rynku mocy"
+        "grid_demand_fcst": "Prognozowane_zapotrzebowanie_sieci",
+        "req_pow_res": "Wymagana_rezerwa_mocy_OSP",
+        "surplus_cap_avail_tso": "Nadwyzka_mocy_dostepna_dla_OSP_(7)_+_(9)_-_[(3)_-_(12)]_-_(13)",
+        "gen_surplus_avail_tso_above": "Nadwyzka_mocy_dostepna_dla_OSP_ponad_wymagana_rezerwe_moc_(5)_-_(4)",
+        "avail_cap_gen_units_stor_prov": "Moc_dyspozycyjna_JW_i_magazynow_energii_swiadczacych_uslugi_bilansujace_w_ramach_RB",
+        "avail_cap_gen_units_stor_prov_tso": "Moc_dyspozycyjna_JW_i_magazynow_energii_swiadczacych_uslugi_bilansujace_w_ramach_RB_dostepna_dla_OSP",
+        "fcst_gen_unit_stor_prov": "Przewidywana_generacja_JW_i_magazynow_energii_swiadczacych_uslugi_bilansujace_w_ramach_RB_(3)_-_(9)",
+        "fcst_gen_unit_stor_non_prov": "Prognozowana_generacja_JW_i_magazynow_energii_nie_swiadczacych_uslug_bilansujacych_w_ramach_RB",
+        "fcst_wi_tot_gen": "Prognozowana_sumaryczna_generacja_zrodel_wiatrowych",
+        "fcst_pv_tot_gen": "Prognozowana_sumaryczna_generacja_zrodel_fotowoltaicznych",
+        "planned_exchange": "Planowane_saldo_wymiany_miedzysystemowej",
+        "fcst_unav_energy": "Prognozowana_wielkosc_niedyspozycyjnosci_wynikajaca_z_ograniczen_sieciowych_wystepujacych_w_sieci_przesylowej_oraz_sieci_dystrybucyjnej_w_zakresie_dostarczania_energii_elektrycznej",
+        "sum_unav_oper_cond": "Prognozowana_wielkosc_niedyspozycyjnosci_wynikajacych_z_warunkow_eksploatacyjnych_JW_swiadczacych_uslugi_bilansujace_w_ramach_RB",
+        "pred_gen_res_not_cov": "Przewidywana_generacja_zasobow_wytworczych_nieobjetych_obowiazkami_mocowymi",
+        "cap_market_obligation": "Obowiazki_mocowe_wszystkich_jednostek_rynku_mocy"
     }
 
     def __init__(
@@ -53,11 +56,11 @@ class OptimizedDataProcessor:
         self.kolekcja_mongo = kolekcja_mongo
         self.data_start_dt = datetime.datetime.strptime(data_start, '%Y-%m-%d')
 
-    # --- CSV placeholder (pozostawiamy dla kompatybilności) ---
+    # --- CSV placeholder (dla kompatybilności; nieużywane w tym strumieniu) ---
     def process_csv_content(self, csv_content: bytes) -> List[Dict[str, Any]]:
         return []
 
-    # --- JSON flow poniżej ---
+    # --- JSON flow ---
     def _to_int(self, v):
         if v is None:
             return None
@@ -66,16 +69,26 @@ class OptimizedDataProcessor:
         except Exception:
             return None
 
-    def _iso_utc_start_of_day_for_business_date(self, business_date_str: str) -> str:
-        """Doba = północ lokalna (Europe/Warsaw) dla business_date, zrzut do UTC ISO."""
+    def _start_of_business_day_utc(self, business_date_str: str) -> datetime.datetime:
+        """
+        Zwraca datetime UTC odpowiadający północy lokalnej (Europe/Warsaw)
+        dla podanego business_date (YYYY-MM-DD).
+        """
         warsaw = pytz.timezone('Europe/Warsaw')
         dt_local_date = datetime.datetime.strptime(business_date_str, '%Y-%m-%d').date()
-        dt_local = warsaw.localize(datetime.datetime.combine(dt_local_date, datetime.time(0, 0)))
-        return dt_local.astimezone(pytz.UTC).isoformat()
+        dt_local_midnight = warsaw.localize(datetime.datetime.combine(dt_local_date, datetime.time(0, 0)))
+        return dt_local_midnight.astimezone(pytz.UTC)
 
     def process_json_value(self, json_obj: dict) -> List[Dict[str, Any]]:
         """
-        Przekształca JSON z API PSE (pk5l-wp) do 'ładnych' pól i upsertuje do Mongo po (Doba, Godzina).
+        Przekształca JSON z API PSE (pk5l-wp) do technicznych pól.
+        W Mongo zapisuje jeden dokument na dzień:
+          - data_cet = początek doby lokalnej (Warszawa) w UTC (bez dodanej godziny)
+          - first = pierwszy snapshot (pełna lista godzin)
+          - newest = ostatni snapshot (pełna lista godzin)
+        Każdy element w first/newest ma:
+          - Doba = start_dnia_UTC + Godzina (czyli per-godzina timestamp)
+          - Godzina = 0..23 (int)
         """
         items = []
         if isinstance(json_obj, dict):
@@ -86,6 +99,7 @@ class OptimizedDataProcessor:
             items = []
 
         result: List[Dict[str, Any]] = []
+        start_day_utc: Optional[datetime.datetime] = None
 
         for row in items:
             # Godzina z 'plan_dtime' (lokalny czas 'YYYY-MM-DD HH:MM:SS')
@@ -94,19 +108,23 @@ class OptimizedDataProcessor:
             except Exception:
                 godz = None
 
-            # Doba: północ lokalna z 'business_date' → UTC ISO
-            doba_iso_utc = None
-            if row.get('business_date'):
-                doba_iso_utc = self._iso_utc_start_of_day_for_business_date(row['business_date'])
+            # Ustal początek doby lokalnej w UTC tylko raz (z pierwszego rekordu z business_date)
+            if start_day_utc is None and row.get('business_date'):
+                start_day_utc = self._start_of_business_day_utc(row['business_date'])
+
+            # Doba per rekord: początek_doby_UTC + godzina
+            doba_utc_datetime = None
+            if start_day_utc is not None and godz is not None:
+                doba_utc_datetime = start_day_utc + datetime.timedelta(hours=godz)
 
             doc: Dict[str, Any] = {
-                'Doba': doba_iso_utc,
+                'Doba': doba_utc_datetime,
                 'Godzina': godz,
             }
 
-            # Mapowanie API → „ładne” nazwy
-            for api_key, pretty_key in self.FIELD_MAPPING.items():
-                doc[pretty_key] = row.get(api_key)
+            # Mapowanie API → techniczne nazwy
+            for api_key, tech_key in self.FIELD_MAPPING.items():
+                doc[tech_key] = row.get(api_key)
 
             # Wymuszenie typów dla kolumn całkowitych wg configu
             for col in self.int_cols:
@@ -115,12 +133,32 @@ class OptimizedDataProcessor:
 
             result.append(doc)
 
-        # Upsert do Mongo po (Doba, Godzina)
-        if self.mongo_connector and self.kolekcja_mongo and len(result) > 0:
+        # Upsert do Mongo: jeden dokument na dzień (`first` niezmienny, `newest` nadpisywany)
+        if self.mongo_connector and self.kolekcja_mongo and len(result) > 0 and start_day_utc is not None:
             if self.mongo_connector.connect():
                 col = self.mongo_connector.db[self.kolekcja_mongo]
-                for doc in result:
-                    key = {'Doba': doc.get('Doba'), 'Godzina': doc.get('Godzina')}
-                    col.update_one(key, {'$set': doc}, upsert=True)
+
+                data_cet = start_day_utc  # identyfikator dnia (początek doby lokalnej zapisany w UTC)
+                now_utc = datetime.datetime.now(pytz.UTC)
+
+                existing = col.find_one({'data_cet': data_cet})
+
+                if existing:
+                    # Tylko podmieniamy newest + aktualizujemy znacznik czasu
+                    col.update_one(
+                        {'_id': existing['_id']},
+                        {'$set': {
+                            'newest': result,
+                            'last_update': now_utc
+                        }}
+                    )
+                else:
+                    # Pierwszy zapis → tworzymy first + newest + last_update
+                    col.insert_one({
+                        'data_cet': data_cet,
+                        'first': result,
+                        'newest': result,
+                        'last_update': now_utc
+                    })
 
         return result
